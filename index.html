@@ -443,6 +443,8 @@ const gameManager = new GameManager(canvas);
         let redPoints = [];
         let coins = 0;
         let killsWithoutDeath = 0;
+        let lastX = canvas.width / 2;
+        let skewAngle = 0;
  
         // =============== FONCTIONS UTILITAIRES ===============
         function playSound(sound) {
@@ -640,42 +642,30 @@ function shootBullet() {
         }
  
         // =============== FONCTIONS DE DESSIN ===============
-        function drawStarship() {
-            ctx.drawImage(starshipImg, starship.x, starship.y, starship.width, starship.height);
-        }
- 
-        function drawBullets() {
-            starship.bullets = starship.bullets.filter((bullet) => bullet.y > 0);
-            starship.bullets.forEach((bullet) => {
-                ctx.drawImage(bulletImg, bullet.x, bullet.y, bullet.width, bullet.height);
-                bullet.y -= bullet.speed;
-                if (bullet.vx) bullet.x += bullet.vx;
-                if (bullet.vy) bullet.y += bullet.vy;
-            });
-        }
- 
-        function drawEnemies() {
-            enemies.forEach((enemy, index) => {
-                ctx.drawImage(enemyImgs[enemy.type], enemy.x, enemy.y, enemy.width, enemy.height);
-                enemy.x += enemy.vx;
-                enemy.y += enemy.vy;
- 
-                if (enemy.x <= 0 || enemy.x + enemy.width >= canvas.width) enemy.vx *= -1;
-                if (enemy.y <= 0) enemy.vy *= -1;
-                if (enemy.y + enemy.height >= canvas.height) enemies.splice(index, 1);
-            });
-        }
- 
-        function drawEnemyBullets() {
-            enemyBullets = enemyBullets.filter(
-                (bullet) => bullet.y < canvas.height && bullet.x > 0 && bullet.x < canvas.width
-            );
-            enemyBullets.forEach((bullet) => {
-                ctx.drawImage(enemyBulletImgs[bullet.type], bullet.x, bullet.y, bullet.width, bullet.height);
-                if (bullet.vx) bullet.x += bullet.vx;
-                else bullet.y += bullet.speed;
-            });
-        }
+     // Remplacez la fonction drawStarship par celle-ci :
+function drawStarship() {
+    // Calculer l'angle d'inclinaison basé sur le mouvement horizontal
+    const dx = starship.x - lastX;
+    const targetSkew = dx * 0.02; // Ajustez ce nombre pour plus ou moins d'inclinaison
+    
+    // Lissage de l'animation
+    skewAngle += (targetSkew - skewAngle) * 0.1;
+    
+    // Sauvegarder le contexte actuel
+    ctx.save();
+    
+    // Appliquer la transformation pour l'inclinaison
+    ctx.transform(1, 0, skewAngle, 1, starship.x, starship.y);
+    
+    // Dessiner le vaisseau
+    ctx.drawImage(starshipImg, 0, 0, starship.width, starship.height);
+    
+    // Restaurer le contexte
+    ctx.restore();
+    
+    // Mettre à jour la dernière position X
+    lastX = starship.x;
+}
  
 // =============== GESTION DES COLLISIONS ===============
 function checkCollisions() {
