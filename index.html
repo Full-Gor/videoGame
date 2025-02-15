@@ -179,26 +179,26 @@
       // =============== CHARGEMENT DES IMAGES ===============
       // Images principales
       const starshipImg = new Image();
-      starshipImg.src = "img/starship1.jpg";
+      starshipImg.src = "img/starship1.png";
  
       const bulletImg = new Image();
-      bulletImg.src = "img/bullets1.jpg";
+      bulletImg.src = "img/bullets1.png";
  
       // Images des ennemis (6 types)
       const enemyImgs = Array(6).fill().map(() => new Image());
       enemyImgs.forEach((img, i) => {
-          img.src = `img/enemy${i ? i + 1 : ""}.jpg`;
+          img.src = `img/enemy${i ? i + 1 : ""}.png`;
       });
  
       // Images des projectiles ennemis (3 types)
       const enemyBulletImgs = Array(3).fill().map(() => new Image());
       enemyBulletImgs.forEach((img, i) => {
-          img.src = `img/bullets${i + 2}.jpg`;
+          img.src = `img/bullets${i + 2}.png`;
       });
  
       // Images des bonus
       const livesImg = new Image();
-      livesImg.src = "img/lives.jpg";
+      livesImg.src = "img/lives.png";
  
       const powerUpImgs = Array(3).fill().map(() => new Image());
       powerUpImgs.forEach((img, i) => {
@@ -313,64 +313,113 @@ class GameObject {
                 });
             }
  
-            checkCollisions(starship, handlePowerUp, handleLife) {
-                // Vérification des collisions avec les power-ups
-                this.powerUps = this.powerUps.filter(powerUp => {
-                    if (checkCollision(starship, powerUp)) {
-                        handlePowerUp(powerUp.type);
-                        return false;
-                    }
-                    return true;
-                });
- 
-                // Vérification des collisions avec les vies
-                this.lives = this.lives.filter(life => {
-                    if (checkCollision(starship, life)) {
-                        handleLife();
-                        return false;
-                    }
-                    return true;
-                });
-            }
         }
- 
-        class GameManager {
-            constructor(canvas) {
-                this.canvas = canvas;
-                this.isPaused = false;
-                this.setupPauseControl();
-            }
- 
-            setupPauseControl() {
-                window.addEventListener("mousedown", (e) => {
-                    if (e.button === 1) {
-                        e.preventDefault();
-                        this.togglePause();
-                    }
-                });
-            }
- 
-            togglePause() {
-                this.isPaused = !this.isPaused;
-                if (this.isPaused) {
-                    soundEffects.shoot.pause();
-                } else if (shooting) {
-                    soundEffects.shoot.play();
+
+// =============== FONCTION DE COLLISION ===============
+function checkCollisions() {
+    // Collisions avec les ennemis et les balles
+    enemies = enemies.filter((enemy) => {
+        // Vérification des collisions balles-ennemis
+        const bulletHit = starship.bullets.some((bullet, j) => {
+            if (checkCollision(bullet, enemy)) {
+                playSound(soundEffects.hit);
+                starship.bullets.splice(j, 1);
+                
+                // Génération des points rouges
+                for (let k = 0; k < 30; k++) {
+                    redPoints.push({
+                        x: enemy.x + Math.random() * enemy.width,
+                        y: enemy.y + Math.random() * enemy.height
+                    });
                 }
+                
+                handleKill();
+                return true;
             }
- 
-            draw(ctx) {
-                if (this.isPaused) {
-                    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.fillStyle = "white";
-                    ctx.font = "48px Arial";
-                    ctx.textAlign = "center";
-                    ctx.fillText("PAUSE", canvas.width / 2, canvas.height / 2);
-                }
-            }
+            return false;
+        });
+
+        // Si l'ennemi est touché par une balle
+        if (bulletHit) {
+            return false; // Supprime l'ennemi
         }
- 
+
+        // Collision vaisseau-ennemi
+        if (checkCollision(starship, enemy)) {
+            playSound(soundEffects.hit);
+            playerLives--;
+            killsWithoutDeath = 0;
+            document.getElementById("livesCount").innerText = playerLives;
+            if (playerLives <= 0) {
+                gameOver();
+            }
+            return false; // Supprime l'ennemi
+        }
+
+        return true; // Garde l'ennemi
+    });
+
+    // Collisions avec les balles ennemies
+    enemyBullets = enemyBullets.filter((bullet) => {
+        if (checkCollision(starship, bullet)) {
+            playSound(soundEffects.hit);
+            playerLives--;
+            document.getElementById("livesCount").innerText = playerLives;
+            if (playerLives <= 0) {
+                gameOver();
+            }
+            return false;
+        }
+        return true;
+    });
+
+    // Vérification des collisions avec les bonus
+    bonusManager.checkCollisions(
+        starship,
+        (type) => activatePowerUp(type),
+        () => {
+            playerLives++;
+            document.getElementById("livesCount").innerText = playerLives;
+        }
+    );
+}
+
+class GameManager {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.isPaused = false;
+        this.setupPauseControl();
+    }
+
+    setupPauseControl() {
+        window.addEventListener("mousedown", (e) => {
+            if (e.button === 1) {
+                e.preventDefault();
+                this.togglePause();
+            }
+        });
+    }
+
+    togglePause() {
+        this.isPaused = !this.isPaused;
+        if (this.isPaused) {
+            soundEffects.shoot.pause();
+        } else if (shooting) {
+            soundEffects.shoot.play();
+        }
+    }
+
+    draw(ctx) {
+        if (this.isPaused) {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "white";
+            ctx.font = "48px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("PAUSE", canvas.width / 2, canvas.height / 2);
+        }
+    }
+}
 // =============== VARIABLES GLOBALES DU JEU ===============
 const gameManager = new GameManager(canvas);
         const bonusManager = new BonusManager();
@@ -378,8 +427,8 @@ const gameManager = new GameManager(canvas);
         const starship = {
             x: canvas.width / 2,
             y: canvas.height - 50,
-            width: 30,
-            height: 30,
+            width: 100,
+            height: 100,
             bullets: [],
             powerUpLevel: 0,
         };
@@ -507,8 +556,8 @@ function shootBullet() {
                         starship.bullets.push({
                             x: starship.x + starship.width / 2 + xOffset,
                             y: starship.y,
-                            width: 5,
-                            height: 10,
+                            width: 10,
+                            height: 15,
                             speed: 7
                         });
                     });
@@ -526,8 +575,8 @@ function shootBullet() {
                         starship.bullets.push({
                             x: starship.x + starship.width / 2 - 2.5,
                             y: starship.y,
-                            width: 5,
-                            height: 10,
+                            width: 10,
+                            height: 15,
                             speed: 7,
                             ...config
                         });
@@ -581,8 +630,8 @@ function shootBullet() {
                 enemies.push({
                     x: Math.random() * canvas.width,
                     y: (Math.random() * canvas.height) / 2,
-                    width: 50,
-                    height: 50,
+                    width: 100,
+                    height: 100,
                     vx: Math.random() * 4 - 2,
                     vy: Math.random() * 4 - 2,
                     type: Math.floor(Math.random() * 6)
@@ -871,5 +920,4 @@ function update() {
 </html>
  
  
-<meta name="mobile-web-app-capable" content="yes">     <meta name="apple-mobile-web-app-capable" content="yes">     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
  
